@@ -9,6 +9,7 @@
 
 using namespace std::chrono_literals;
 
+// This is a thread safe queue that will be the threadpools SPMC queue.
 template <typename T>
 class ThreadSafeQueue{
     std::queue<T> queue_;
@@ -65,7 +66,7 @@ public:
     }
 };
 
-
+// The parallel algorithm will use a threadpool as our executor.
 class ThreadPool{
     //singleton pattern
     static ThreadPool instance_;
@@ -115,6 +116,7 @@ public:
 
     static size_t thread_number() {return thread_serial_number;}
 
+    // stop() is called from the destructor, so just cleans up the threadpool and queue on program exit.
     void stop(){
         if(active_){
             interrupt_ = true;
@@ -129,6 +131,7 @@ public:
         }
     }
 
+    // takes a lambda f, converts it into a promise which is pushed onto the queue, and returns a future for that promise
     template <typename F>
     std::future<bool> spawn_task(F f){
         std::packaged_task<bool(void)> prom(std::move(f));
@@ -138,7 +141,7 @@ public:
     }
 
 
-
+    // once the main thread is done populating the queue it will steal some work. This feature is currently not working
     bool active_wait(const std::future<bool>& fut){
         std::packaged_task<bool(void)> task;
         bool res{false};

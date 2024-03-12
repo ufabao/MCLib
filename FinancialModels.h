@@ -14,11 +14,14 @@ template <typename T> class BlackScholesModel : public FinancialModel<T> {
   std::vector<double> timeline_;
   const std::vector<SampleDef<T>> *samples_needed_;
 
+  // we make our parameters available for others to tinker with later, specifically to compute the greeks
   std::vector<T *> parameters_;
 
+  // These vectors compute the drift and std up to time t on the timeline, for each t on the timeline
   std::vector<T> underlying_drifts_;
   std::vector<T> underlying_stds_;
 
+  // for each time in the timeline we have a numeraire, forward rate, and discount factor
   std::vector<T> numeraires_;
   std::vector<std::vector<T>> forward_factors_;
   std::vector<std::vector<T>> discount_factors_;
@@ -62,12 +65,14 @@ private:
   }
 
 public:
+  // virtual copy idiom
   std::unique_ptr<FinancialModel<T>> clone() const override{
     auto clone = std::make_unique<BlackScholesModel<T>>(*this);
     clone -> set_parameter_pointers();
     return clone;
   }
 
+  // in order to allocate we need to calculate the sizes needed for the vectors/matricies and reserve that much space
   void allocate(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) override {
     timeline_.clear();
     timeline_.push_back(0.0);
@@ -90,6 +95,7 @@ public:
     }
   }
 
+  // to initialize we pre compute the drifts and std, and then use them to compute forward and discounts
   void initialize(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) override {
     // We want to precompute everything that does not rely on the simulation
     const T mu = rate_ - div_;
@@ -126,6 +132,7 @@ public:
   }
 
 private:
+  // given a scenario we populate its forward and discount factors
   inline void fillScen(const size_t idx, const T& spot, MarketSample<T>& sample, const SampleDef<T>& def) const {
     if(def.numeraire){
         sample.numeraire = numeraires_[idx];
@@ -138,6 +145,8 @@ private:
   }
 
 public:
+  // given a vector of gaussians from the RNG, the models contract is now to simulate the prices and market
+  // events needed for the instrument to compute its payoff
   void generate_path(const std::vector<double>& gaussian_vector, Scenario<T>& path) const override {
     T spot = spot_;
 
