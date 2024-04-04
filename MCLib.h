@@ -4,23 +4,12 @@
 #include <memory>
 #include "ThreadPool.h"
 
-// This header contains the interfaces necessary to run Monte Carlo simulations
-// to value various types of options. we templatize on the number type to
-// specialize to number classes that support autodiff later on
-
-
-// a SampleDef is the market data at a point in time that can influence the price of a financial instrument. 
-// on days where the instrument has a cashflow we need a numeraire, otherwise we do not. 
 template <typename T> 
 struct SampleDef {
   bool numeraire = true;
   std::vector<double> forward_maturities;
   std::vector<double> discount_maturities;
 };
-
-// A market sample is all of the observations we need on a single day to value
-// the instrument - A numeraire, a collection of forward prices that our
-// instrument relies on, and the discounts of those forward prices.
 
 template <typename T> 
 struct MarketSample {
@@ -141,25 +130,24 @@ public:
 // Finally we have the monte carlo algorithm, which is fully generic on the
 // instrument/model/rng.
 inline std::vector<std::vector<double>>
-monte_carlo_simulation(const Instrument<double> &instrument,
-                       const FinancialModel<double> &model, 
+monte_carlo_simulation(Instrument<double> &instrument,
+                       FinancialModel<double> &model, 
                        const RNG &rng,
-                       const size_t num_paths) {
-  // right now the model and rng are easy to copy because they haven't been initialized yet,
-  // working with copies of them is convenient because we can use the same model and rng 
-  // to price many different products in sequence.
-  auto c_model = model.clone();
-  auto c_rng = rng.clone();
-
+                       size_t num_paths) {
+  
   const auto payoff_size = instrument.number_of_payoffs();
-  std::vector<std::vector<double>> results(num_paths,
-                                           std::vector<double>(payoff_size));
+  
+  std::vector<std::vector<double>> 
+  results(num_paths,std::vector<double>(payoff_size));
 
-  c_model->allocate(instrument.timeline(), instrument.samples_needed());
-  c_model->initialize(instrument.timeline(), instrument.samples_needed());
 
-  c_rng->initialize(c_model->simulation_dimension());
-  std::vector<double> gaussian_vector(c_model->simulation_dimension());
+  model.allocate(instrument.timeline(), instrument.samples_needed());
+  model.initialize(instrument.timeline(), instrument.samples_needed());
+
+  auto c_rng = rng.clone();
+  c_rng->initialize(model.simulation_dimension());
+
+  std::vector<double> gaussian_vector(model.simulation_dimension());
 
   Scenario<double> path;
   allocate_path(instrument.samples_needed(), path);
@@ -167,9 +155,11 @@ monte_carlo_simulation(const Instrument<double> &instrument,
 
   for (auto i = 0; i < num_paths; ++i) {
     c_rng->get_gaussians(gaussian_vector);
-    c_model->generate_path(gaussian_vector, path);
+    model.generate_path(gaussian_vector, path);
     instrument.payoffs(path, results[i]);
   }
+
+
   return results;
 }
 
