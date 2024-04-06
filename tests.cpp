@@ -1,7 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
-#include "RNGs.h"
+#include <pcg-cpp-0.98/include/pcg_random.hpp>
 #include "Instruments.h"
 #include "FinancialModels.h"
+#include "RNGs.h"
 #include <algorithm>
 #include <functional>
 

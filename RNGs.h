@@ -1,8 +1,7 @@
 #pragma once
 #include "MCLib.h"
 #include <random>
-#include "pcg_random.hpp"
-
+#include <pcg-cpp-0.98/include/pcg_random.hpp>
 
 // A classic Mersenne twist RNG. 
 class MersenneTwistRNG : public RNG {
