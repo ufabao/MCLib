@@ -2,7 +2,7 @@
 #include <vector>
 #include <algorithm>
 #include <memory>
-#include "ThreadPool.h"
+#include "newthreadpool.h"
 
 template <typename T> 
 struct SampleDef {
@@ -174,7 +174,7 @@ parallel_monte_carlo_simulation(
 // The parallel version of our simulation. finally all of our hardwork will (hopefully) shine!
 {
   // this is the number of iterations we will assign to each thread per chunk
-  size_t batch_size = 1;
+  size_t batch_size = 32;
 
   // The model and rng are currently uninitialized and can be copied easily. Our simulation works with its own copies 
   // of the rng and model so that we can price many different instruments sequentially using the same model and rng.
@@ -194,9 +194,9 @@ parallel_monte_carlo_simulation(
   // now we start to prepare for the parallel simulation
 
   // first we set up the thread pool
-  ThreadPool *pool = ThreadPool::get_instance();
+  ThreadPool *pool = ThreadPool::getInstance();
   pool -> start();
-  const size_t thread_count = pool->number_of_threads();
+  const size_t thread_count = pool->numThreads();
 
   // allocate a gaussian vector and a path for each thread to use
   std::vector<std::vector<double>> gaussian_matrix(thread_count + 1);
@@ -233,9 +233,9 @@ parallel_monte_carlo_simulation(
     // the producer bundles up a nice bit of work and kicks it to the threadpool in 
     // a lambda, the spawn_task function returns a future<bool> for that work,
     // which is pushed into our futures_vector
-    future_vector.push_back(pool->spawn_task([&, first_path, paths_in_task](){
+    future_vector.push_back(pool->spawnTask([&, first_path, paths_in_task](){
       // the thread_number lets helps us pick the correct gaussian_vector and path to use in our calculation
-      const size_t thread_num = pool -> thread_number();
+      const size_t thread_num = pool ->numThreads();
       std::vector<double>& gaussian_vector = gaussian_matrix[thread_num];
       Scenario<double>& path = path_matrix[thread_num];
       
