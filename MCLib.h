@@ -236,6 +236,7 @@ parallel_monte_carlo_simulation(
     future_vector.push_back(pool.submit([&, first_path, paths_in_task](){
       // the thread_number lets helps us pick the correct gaussian_vector and path to use in our calculation
       const size_t thread_num = pool.numThreads();
+
       std::vector<double>& gaussian_vector = gaussian_matrix[thread_num];
       Scenario<double>& path = path_matrix[thread_num];
       
