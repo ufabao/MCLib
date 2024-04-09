@@ -72,8 +72,15 @@ public:
     return clone;
   }
 
+
+  void attune(const Instrument<T>& instrument) override {
+    allocate(instrument.timeline(), instrument.samples_needed());
+    initialize(instrument.timeline(), instrument.samples_needed());
+  }
+
+
   // in order to allocate we need to calculate the sizes needed for the vectors/matricies and reserve that much space
-  void allocate(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) override {
+  void allocate(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) {
     timeline_.clear();
     timeline_.push_back(0.0);
     for(const auto& time : instrument_timeline) if(time > 0.0) timeline_.push_back(time);
@@ -96,7 +103,7 @@ public:
   }
 
   // to initialize we pre compute the drifts and std, and then use them to compute forward and discounts
-  void initialize(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) override {
+  void initialize(const std::vector<double>& instrument_timeline, const std::vector<SampleDef<T>>& samples_needed) {
     // We want to precompute everything that does not rely on the simulation
     const T mu = rate_ - div_;
 
