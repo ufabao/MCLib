@@ -13,7 +13,7 @@ struct SampleDef {
 
 template <typename T> 
 struct MarketSample {
-  T numeraire;
+  T numeraire{T(1.0)};
   std::vector<T> forwards;
   std::vector<T> discounts;
 
@@ -200,12 +200,14 @@ parallel_monte_carlo_simulation(
   // now the book-keeping starts and its easy to get confused
 
   // this is the number of tasks that need to be assigned. 
-  std::vector<std::future<bool>> future_vector(number_of_iterations / batch_size + 1);
+  std::vector<std::future<bool>> future_vector;
+  future_vector.reserve(number_of_iterations/batch_size + 1);
 
-  // in each iteration the producer will increment the first_path in the batch, starting with 0
+  // in each iteration the producer will increment the first_path in the batch, starting with 0,
+  // and decrement the number of paths left
   size_t first_path = 0;
-  // and decrement the number of paths_left -- starting with the full count
   size_t paths_left = number_of_iterations;
+
   while(paths_left > 0){
     // all but the last batch will receive batch_size paths to compute
     size_t paths_in_task = std::min(paths_left, batch_size);
@@ -213,29 +215,32 @@ parallel_monte_carlo_simulation(
     // the producer bundles up a nice bit of work and kicks it to the threadpool in 
     // a lambda, the spawn_task function returns a future<bool> for that work,
     // which is pushed into our futures_vector
-    future_vector.push_back(pool->spawnTask([&, first_path, paths_in_task](){
-      // the thread_number lets helps us pick the correct gaussian_vector and path to use in our calculation
-      const size_t thread_num = pool->numThreads();
+    future_vector.push_back(pool->spawnTask(
 
-      std::vector<double>& gaussian_vector = gaussian_matrix[thread_num];
-      Scenario<double>& path = path_matrix[thread_num];
-      
-      // keeping track of the first_path lets us jump the rng to the correct spot
-      auto& generator = rng_vector[thread_num];
-      generator -> jump_ahead(first_path);
+      [&, first_path, paths_in_task](){
+          const size_t thread_num = pool->numThreads();
 
-      for(size_t i = 0; i < paths_in_task; ++i){
-        generator->get_gaussians(gaussian_vector);
-        model.generate_path(gaussian_vector, path);
-        instrument.payoffs(path, results[first_path + i]);
-      }
-      // return for lambda expression, not entire function. 
-      return true;
+          std::vector<double>& gaussian_vector = gaussian_matrix[thread_num];
+          
+          Scenario<double>& path = path_matrix[thread_num];
+          
+          // keeping track of the first_path lets us jump the rng to the correct spot
+          auto& generator = rng_vector[thread_num];
+          generator -> jump_ahead(first_path);
+
+          for(size_t i = 0; i < paths_in_task; ++i){
+            generator->get_gaussians(gaussian_vector);
+            model.generate_path(gaussian_vector, path);
+            instrument.payoffs(path, results[first_path + i]);
+          }
+          // return for lambda expression, not entire function. 
+          return true;
     }));
 
     paths_left -= paths_in_task;
     first_path += paths_in_task;
   }
 
+  for(auto& future : future_vector) future.wait(); 
   return results;
 }

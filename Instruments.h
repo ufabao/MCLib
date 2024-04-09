@@ -6,13 +6,13 @@ class EuropeanCall : public Instrument<T>{
     double strike_;
     double expiration_;
 
-    const size_t num_payoffs_{1};
+    const size_t num_payoffs_;
     std::vector<double> my_timeline_;
     std::vector<SampleDef<T>> samples_;
     
 
 public:
-    EuropeanCall(double strike, double expiration): strike_(strike), expiration_(expiration) {
+    EuropeanCall(double strike, double expiration): strike_(strike), expiration_(expiration), num_payoffs_(1) {
         my_timeline_.push_back(expiration);
         samples_.resize(1);
         samples_[0].numeraire = true;
