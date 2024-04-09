@@ -2,6 +2,7 @@
 #include <pcg-cpp-0.98/include/pcg_random.hpp>
 #include "Instruments.h"
 #include "FinancialModels.h"
+#include "MCLib.h"
 #include "RNGs.h"
 #include <algorithm>
 #include <functional>
@@ -89,8 +90,7 @@ TEST_CASE("European Call price", "[Instrument]"){
     EuropeanCall<double> call{100.0, 1.0};
     std::vector<double> result(1, 0.0);
     Scenario<double> path(1);
-    allocate_path(call.samples_needed(), path);
-    initialize_path(path);
+    initialize_path(call.samples_needed(), path);
     call.payoffs(path, result);
 
     REQUIRE(result[0] == 0.0);
@@ -113,8 +113,7 @@ TEST_CASE("Black Scholes Model", "[FinancialModel]"){
 
   auto cmodel = model.clone();
 
-  cmodel -> allocate(call.timeline(), call.samples_needed());
-  cmodel -> initialize(call.timeline(), call.samples_needed());
+  cmodel -> attune(call);
 
   REQUIRE(cmodel -> simulation_dimension() == 1);
 
@@ -122,8 +121,7 @@ TEST_CASE("Black Scholes Model", "[FinancialModel]"){
   std::vector<double> fake_gauss(cmodel->simulation_dimension(), 1.0);
 
   Scenario<double> path;
-  allocate_path(call.samples_needed(), path);
-  initialize_path(path);
+  initialize_path(call.samples_needed(), path);
 
 
   std::vector<std::vector<double>> result(1, std::vector<double>(1,0.0));
@@ -149,8 +147,13 @@ TEST_CASE("Parallel Simulation Works!", "[Simulation]"){
   EuropeanCall<double> call{100.0, 1.0};
   PCGRNG rng;
 
+  auto pool = ThreadPool::getInstance();
+  pool->start();
+
   auto result = parallel_monte_carlo_simulation(call, model, rng, 100000);
   auto price = std::accumulate(result.begin(), result.end(), 0.0l,
                [](auto acc, auto v){return acc + v[0];}) / 100000;
-  REQUIRE(std::abs(price - 7.97) <= 0.1);
+  REQUIRE(std::abs(price - 7.96) <= 0.1);
+
+  pool->stop();
 }
