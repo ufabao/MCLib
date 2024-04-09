@@ -11,6 +11,3 @@ add_executable(benchmarks benchmarks.cpp newthreadpool.cpp)
 target_link_libraries(benchmarks benchmark::benchmark)
 
 add_library(MCLib MCLib.cpp)
-
-
-add_executable(fix fixing.cpp newthreadpool.cpp)
