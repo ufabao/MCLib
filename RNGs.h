@@ -1,5 +1,6 @@
 #pragma once
 #include "MCLib.h"
+#include <pcg-cpp-0.98/include/pcg_extras.hpp>
 #include <random>
 #include <pcg-cpp-0.98/include/pcg_random.hpp>
 
@@ -58,7 +59,7 @@ public:
 // Apparently the PCG family of RNG's are the state of the art for monte carlo simulations, although it doesn't seem like many finance
 // books/repositories use them. 
 class PCGRNG : public RNG{
-  long unsigned seed_{42};
+  //pcg_extras::seed_seq_from<std::random_device> seed;
   pcg32 generator_;
   std::normal_distribution<double> distribution_{0.0, 1.0};
 
@@ -67,7 +68,7 @@ class PCGRNG : public RNG{
   bool antithetic_flag_{false};
 
 public:
-  PCGRNG(int seed = 42): seed_(seed), generator_{seed_} {}
+  PCGRNG(): generator_{pcg32()} {}
 
   void initialize(const size_t simulation_dimension) override {
     dimension_ = simulation_dimension;
@@ -90,7 +91,7 @@ public:
   }
 
   void jump_ahead(const unsigned steps) override {
-    generator_.advance((steps * simulation_dimension())/2);
+    //generator_.advance((steps * simulation_dimension())/2);
   }
 
   std::unique_ptr<RNG> clone() const override {

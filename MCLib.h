@@ -198,7 +198,6 @@ parallel_monte_carlo_simulation(
 
 
   // now the book-keeping starts and its easy to get confused
-
   // this is the number of tasks that need to be assigned. 
   std::vector<std::future<bool>> future_vector;
   future_vector.reserve(number_of_iterations/batch_size + 1);
@@ -210,11 +209,11 @@ parallel_monte_carlo_simulation(
 
   while(paths_left > 0){
     // all but the last batch will receive batch_size paths to compute
-    size_t paths_in_task = std::min(paths_left, batch_size);
-
     // the producer bundles up a nice bit of work and kicks it to the threadpool in 
     // a lambda, the spawn_task function returns a future<bool> for that work,
     // which is pushed into our futures_vector
+    
+    size_t paths_in_task = std::min(paths_left, batch_size);
     future_vector.push_back(pool->spawnTask(
 
       [&, first_path, paths_in_task](){
@@ -224,7 +223,6 @@ parallel_monte_carlo_simulation(
           
           Scenario<double>& path = path_matrix[thread_num];
           
-          // keeping track of the first_path lets us jump the rng to the correct spot
           auto& generator = rng_vector[thread_num];
           generator -> jump_ahead(first_path);
 
@@ -241,6 +239,6 @@ parallel_monte_carlo_simulation(
     first_path += paths_in_task;
   }
 
-  for(auto& future : future_vector) future.wait(); 
+  for(auto& future : future_vector) pool->activeWait(future);
   return results;
 }

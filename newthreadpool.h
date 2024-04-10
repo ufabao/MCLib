@@ -1,118 +1,99 @@
 #pragma once
+#include "ConcurrentQueue.h"
 #include <functional>
 #include <future>
 #include <thread>
-#include "ConcurrentQueue.h"
 
 using namespace std;
 
 typedef packaged_task<bool(void)> Task;
 typedef future<bool> TaskHandle;
 
-class ThreadPool 
-{
-	static ThreadPool myInstance;
-	ConcurrentQueue<Task> myQueue;
-	vector<thread> myThreads;
-	bool myActive;
-	bool myInterrupt;
-	static thread_local size_t myTLSNum;
+class ThreadPool {
+  static ThreadPool myInstance;
+  ConcurrentQueue<Task> myQueue;
+  vector<thread> myThreads;
+  bool myActive;
+  bool myInterrupt;
+  static thread_local size_t myTLSNum;
 
-	void threadFunc(const size_t num)
-	{
-		myTLSNum = num;
+  void threadFunc(const size_t num) {
+    myTLSNum = num;
 
-		Task t;
-		while (!myInterrupt) 
-		{
-			myQueue.pop(t);
-			if (!myInterrupt) t();			
-		}
-	}
+    Task t;
+    while (!myInterrupt) {
+      myQueue.pop(t);
+      if (!myInterrupt)
+        t();
+    }
+  }
 
-    ThreadPool() : myActive(false), myInterrupt(false) {}
+  ThreadPool() : myActive(false), myInterrupt(false) {}
 
 public:
+  static ThreadPool *getInstance() { return &myInstance; }
 
-	static ThreadPool* getInstance() { return &myInstance; }
+  size_t numThreads() const { return myThreads.size(); }
 
-	size_t numThreads() const { return myThreads.size(); }
+  static size_t threadNum() { return myTLSNum; }
 
-	static size_t threadNum() { return myTLSNum; }
+  void start(const size_t nThread = thread::hardware_concurrency() - 1) {
+    if (!myActive) {
+      myThreads.reserve(nThread);
 
-	void start(const size_t nThread = thread::hardware_concurrency() - 1)
-	{
-        if (!myActive) 
-        {
-            myThreads.reserve(nThread);
+      for (size_t i = 0; i < nThread; i++)
+        myThreads.push_back(thread(&ThreadPool::threadFunc, this, i + 1));
 
-            for (size_t i = 0; i < nThread; i++)
-                myThreads.push_back(thread(&ThreadPool::threadFunc, this, i + 1));
-
-            myActive = true;
-        }
-	}
-
-    ~ThreadPool()
-    {
-        stop();
+      myActive = true;
     }
-        
-    void stop()
-	{
-        if (myActive)
-        {
-            myInterrupt = true;
+  }
 
-            myQueue.interrupt();
+  ~ThreadPool() { stop(); }
 
-            for_each(myThreads.begin(), myThreads.end(), mem_fn(&thread::join));
+  void stop() {
+    if (myActive) {
+      myInterrupt = true;
 
-            myThreads.clear();
+      myQueue.interrupt();
 
-            myQueue.clear();
-            myQueue.resetInterrupt();
+      for_each(myThreads.begin(), myThreads.end(), mem_fn(&thread::join));
 
-            myActive = false;
+      myThreads.clear();
 
-            myInterrupt = false;
-        }
-	}
+      myQueue.clear();
+      myQueue.resetInterrupt();
 
-	ThreadPool(const ThreadPool& rhs) = delete;
-	ThreadPool& operator=(const ThreadPool& rhs) = delete;
-	ThreadPool(ThreadPool&& rhs) = delete;
-	ThreadPool& operator=(ThreadPool&& rhs) = delete;
+      myActive = false;
 
-	template<typename Callable>
-	TaskHandle spawnTask(Callable c)
-	{
-		Task t(move(c));
-		TaskHandle f = t.get_future();
-		myQueue.push(std::move(t));
-		return f;
-	}
+      myInterrupt = false;
+    }
+  }
 
+  ThreadPool(const ThreadPool &rhs) = delete;
+  ThreadPool &operator=(const ThreadPool &rhs) = delete;
+  ThreadPool(ThreadPool &&rhs) = delete;
+  ThreadPool &operator=(ThreadPool &&rhs) = delete;
 
-	bool activeWait(const TaskHandle& f)
-	{
-		Task t;
-		bool b = false;
+  template <typename Callable> TaskHandle spawnTask(Callable c) {
+    Task t(move(c));
+    TaskHandle f = t.get_future();
+    myQueue.push(std::move(t));
+    return f;
+  }
 
+  bool activeWait(const TaskHandle &f) {
+    Task t;
+    bool b = false;
 
-		while (f.wait_for(0s) != future_status::ready)
-		{
-			if (myQueue.tryPop(t)) 
-			{
-				t();
-				b = true;
-			}
-			else
-			{
-				f.wait();
-			}
-		}
+    while (f.wait_for(0s) != future_status::ready) {
+      if (myQueue.tryPop(t)) {
+        t();
+        b = true;
+      } else {
+        f.wait();
+      }
+    }
 
-		return b;
-	}
+    return b;
+  }
 };
