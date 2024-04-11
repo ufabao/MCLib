@@ -60,15 +60,15 @@ public:
 // books/repositories use them. 
 class PCGRNG : public RNG{
   //pcg_extras::seed_seq_from<std::random_device> seed;
-  pcg32 generator_;
+  pcg64 generator_;
   std::normal_distribution<double> distribution_{0.0, 1.0};
 
-  size_t dimension_;
+  size_t dimension_{0};
   std::vector<double> cached_values_;
   bool antithetic_flag_{false};
 
 public:
-  PCGRNG(): generator_{pcg32()} {}
+  PCGRNG() {}
 
   void initialize(const size_t simulation_dimension) override {
     dimension_ = simulation_dimension;
