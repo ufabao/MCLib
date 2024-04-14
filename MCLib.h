@@ -1,9 +1,8 @@
 #pragma once
-#include <list>
 #include <vector>
 #include <algorithm>
 #include <memory>
-#include "newthreadpool.h"
+#include "ThreadPool.h"
 
 template <typename T> 
 struct SampleDef {

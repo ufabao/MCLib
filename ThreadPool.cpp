@@ -1,5 +1,6 @@
+
 #include "ThreadPool.h"
 
-ThreadPool ThreadPool::instance_;
+ThreadPool ThreadPool::myInstance;
 
-thread_local size_t ThreadPool::thread_serial_number = 0;
+thread_local size_t ThreadPool::myTLSNum = 0;
