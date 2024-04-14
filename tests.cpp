@@ -6,6 +6,9 @@
 #include "RNGs.h"
 #include <algorithm>
 #include <functional>
+#include <chrono>
+
+using namespace std::chrono;
 
 
 TEST_CASE("MersenneTwist RNG basic operations", "[RNG]") {
@@ -118,10 +121,18 @@ TEST_CASE("Simulation works!", "[Simulation]"){
   BlackScholesModel<double> model{100.0, 0.2};
   EuropeanCall<double> call{100.0, 1.0};
   MersenneTwistRNG rng;
+  int num_iterations = 10000000;
 
-  auto result = monte_carlo_simulation(call, model, rng, 1000000);
+
+  //auto start = high_resolution_clock::now();
+  auto result = monte_carlo_simulation(call, model, rng, num_iterations);
+  //auto end = high_resolution_clock::now();
+  //auto duration = duration_cast<milliseconds>(end - start);
+
+  //std::cout << "Serial time: " << duration << std::endl;
+
   auto mean = std::accumulate(result.begin(), result.end(), 0.0l,
-               [](auto sum, auto v){return sum + v[0] / 1000000;});
+               [=](auto sum, auto v){return sum + v[0] / num_iterations;});
   REQUIRE(std::abs(mean - 7.965) <= 0.25);
 }
 
@@ -131,12 +142,20 @@ TEST_CASE("Parallel Simulation Works!", "[Simulation]"){
   EuropeanCall<double> call{100.0, 1.0};
   PCGRNG rng;
 
+  int num_iterations = 10000000;
+
   auto pool = ThreadPool::getInstance();
   pool->start();
 
-  auto result = parallel_monte_carlo_simulation(call, model, rng, 1000000);
+  //auto start = high_resolution_clock::now();
+  auto result = parallel_monte_carlo_simulation(call, model, rng, num_iterations);
+  //auto end = high_resolution_clock::now();
+  //auto duration = duration_cast<milliseconds>(end - start);
+
+  //std::cout << "Parallel time: " <<  duration << std::endl;
+
   auto price = std::accumulate(result.begin(), result.end(), 0.0l,
-               [](auto acc, auto v){return acc + v[0];}) / 1000000;
+               [=](auto acc, auto v){return acc + v[0] / num_iterations;});
   REQUIRE(std::abs(price - 7.965) <= 0.25);
 
   pool->stop();

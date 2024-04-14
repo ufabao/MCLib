@@ -9,5 +9,3 @@ target_link_libraries(tests PRIVATE Catch2::Catch2WithMain)
 find_package(benchmark REQUIRED)
 add_executable(benchmarks benchmarks.cpp ThreadPool.cpp)
 target_link_libraries(benchmarks benchmark::benchmark)
-
-add_library(MCLib MCLib.cpp)

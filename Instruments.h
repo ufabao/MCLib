@@ -37,6 +37,8 @@ public:
     payoffs[0] = std::max(path[0].forwards[0] - strike_, 0.0) *
                  path[0].discounts[0] / path[0].numeraire;
   }
+
+  ~EuropeanCall() override = default;
 };
 
 template <typename T> class UpAndOutCall : public Instrument<T> {
@@ -77,7 +79,7 @@ public:
 
 
   std::unique_ptr<Instrument<T>> clone() const override {
-    return make_unique<UpAndOutCall<T>>(*this);
+    return std::make_unique<UpAndOutCall<T>>(*this);
   }
 
     const std::vector<double>& timeline() const override {
@@ -110,7 +112,7 @@ public:
             }
         }
 
-        payoffs[1] = max(path.back().forwards[0] - strike_, 0.0) / path.back().numeraire;
+        payoffs[1] = std::max(path.back().forwards[0] - strike_, 0.0) / path.back().numeraire;
         payoffs[0] = alive * payoffs[1];
     }
 
