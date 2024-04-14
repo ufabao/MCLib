@@ -7,6 +7,19 @@
 
 
 
+
+static void crazy(benchmark::State &state) {
+  std::vector<int> v(100, 0);
+
+  for (auto _ : state) {
+    for (int i = 0; i < 100; ++i) {
+      std::jthread thr([&v, i] { v[i] = 1; });
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
 static void lesscrazy(benchmark::State &state) {
   std::vector<int> v(100, 0);
 
@@ -23,17 +36,6 @@ static void lesscrazy(benchmark::State &state) {
   }
 }
 
-static void crazy(benchmark::State &state) {
-  std::vector<int> v(100, 0);
-
-  for (auto _ : state) {
-    for (int i = 0; i < 100; ++i) {
-      std::jthread thr([&v, i] { v[i] = 1; });
-    }
-    benchmark::DoNotOptimize(v);
-    benchmark::ClobberMemory();
-  }
-}
 
 static void normal(benchmark::State &state) {
   std::vector<int> v(100, 0);
@@ -134,7 +136,7 @@ static void threadpool(benchmark::State &state) {
 }
 
 
-static void BM_Mersenne(benchmark::State& state) {
+static void Mersenne(benchmark::State& state) {
   MersenneTwistRNG rng;
   std::vector<double> gaussian_vector(100000);
   rng.initialize(gaussian_vector.size());
@@ -147,7 +149,7 @@ static void BM_Mersenne(benchmark::State& state) {
 
 
 // Define another benchmark
-static void BM_PCG(benchmark::State& state) {
+static void PCG(benchmark::State& state) {
   PCGRNG rng;
   std::vector<double> gaussian_vector(100000);
   for (auto _ : state)
@@ -158,7 +160,7 @@ static void BM_PCG(benchmark::State& state) {
 
 
 
-static void BM_parallel(benchmark::State& state){
+static void parallel(benchmark::State& state){
   auto pool = ThreadPool::getInstance();
   //pool->start();
   BlackScholesModel<double> model{100.0, 0.2};
@@ -181,7 +183,7 @@ static void BM_parallel(benchmark::State& state){
 
 
 
-static void BM_serial(benchmark::State& state){
+static void serial(benchmark::State& state){
   BlackScholesModel<double> model{100.0, 0.2};
   EuropeanCall<double> call{100.0, 1.0};
   UpAndOutCall<double> exotic_option{110, 1.0, 130, 0.01, 0.01};
@@ -213,11 +215,11 @@ static void BM_serial(benchmark::State& state){
 //BENCHMARK(threadpool);
 
 
-//BENCHMARK(BM_Mersenne);
-//BENCHMARK(BM_PCG);
+//BENCHMARK(Mersenne);
+//BENCHMARK(PCG);
 
-BENCHMARK(BM_parallel);
-BENCHMARK(BM_serial);
+BENCHMARK(parallel);
+BENCHMARK(serial);
 
 
 
