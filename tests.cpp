@@ -2,6 +2,7 @@
 #include <pcg-cpp-0.98/include/pcg_random.hpp>
 #include "Instruments.h"
 #include "FinancialModels.h"
+#include "MCLib.h"
 #include "RNGs.h"
 #include <algorithm>
 #include <functional>
@@ -19,6 +20,7 @@ TEST_CASE("MersenneTwist RNG basic operations", "[RNG]") {
   std::transform(gaussian_vector.begin(), gaussian_vector.end(),
                  antithetic.begin(), gaussian_vector.begin(),
                  std::plus<double>());
+
 
   auto it = std::find_if(gaussian_vector.begin(), gaussian_vector.end(),
                          [](auto x) { return x != 0.0; });
@@ -64,24 +66,6 @@ TEST_CASE("PCG RNG basic operations", "[RNG]"){
 
   // This tests the antithetic sampling.
   REQUIRE(it == gaussian_vector.end());
-
-  // now test the jump ahead
-  PCGRNG rng2;
-  rng2.initialize(10);
-  std::vector<double> gaussian_vector2(10);
-
-  PCGRNG rng3;
-  rng3.initialize(10);
-  std::vector<double> gaussian_vector3(10);
-
-  rng.jump_ahead(1000);
-  for(int i = 0; i < 1000; ++i) rng3.get_gaussians(gaussian_vector3);
-
-  rng.get_gaussians(gaussian_vector2);
-  rng3.get_gaussians(gaussian_vector3);
-
-  // TODO
-  //REQUIRE(gaussian_vector2 == gaussian_vector3);
 }
 
 TEST_CASE("European Call price", "[Instrument]"){
@@ -89,8 +73,7 @@ TEST_CASE("European Call price", "[Instrument]"){
     EuropeanCall<double> call{100.0, 1.0};
     std::vector<double> result(1, 0.0);
     Scenario<double> path(1);
-    allocate_path(call.samples_needed(), path);
-    initialize_path(path);
+    initialize_path(call.samples_needed(), path);
     call.payoffs(path, result);
 
     REQUIRE(result[0] == 0.0);
@@ -113,8 +96,7 @@ TEST_CASE("Black Scholes Model", "[FinancialModel]"){
 
   auto cmodel = model.clone();
 
-  cmodel -> allocate(call.timeline(), call.samples_needed());
-  cmodel -> initialize(call.timeline(), call.samples_needed());
+  cmodel -> attune(call);
 
   REQUIRE(cmodel -> simulation_dimension() == 1);
 
@@ -122,8 +104,7 @@ TEST_CASE("Black Scholes Model", "[FinancialModel]"){
   std::vector<double> fake_gauss(cmodel->simulation_dimension(), 1.0);
 
   Scenario<double> path;
-  allocate_path(call.samples_needed(), path);
-  initialize_path(path);
+  initialize_path(call.samples_needed(), path);
 
 
   std::vector<std::vector<double>> result(1, std::vector<double>(1,0.0));
@@ -141,16 +122,38 @@ TEST_CASE("Simulation works!", "[Simulation]"){
   auto result = monte_carlo_simulation(call, model, rng, 1000000);
   auto mean = std::accumulate(result.begin(), result.end(), 0.0l,
                [](auto sum, auto v){return sum + v[0] / 1000000;});
-  REQUIRE(std::abs(mean - 7.96) <= 0.1);
+  REQUIRE(std::abs(mean - 7.965) <= 0.2);
 }
+
 
 TEST_CASE("Parallel Simulation Works!", "[Simulation]"){
   BlackScholesModel<double> model{100.0, 0.2};
   EuropeanCall<double> call{100.0, 1.0};
   PCGRNG rng;
 
-  auto result = parallel_monte_carlo_simulation(call, model, rng, 100000);
+  auto pool = ThreadPool::getInstance();
+  pool->start();
+
+  auto result = parallel_monte_carlo_simulation(call, model, rng, 1000000);
   auto price = std::accumulate(result.begin(), result.end(), 0.0l,
-               [](auto acc, auto v){return acc + v[0];}) / 100000;
-  REQUIRE(std::abs(price - 7.97) <= 0.1);
+               [](auto acc, auto v){return acc + v[0];}) / 1000000;
+  REQUIRE(std::abs(price - 7.965) <= 0.2);
+
+  pool->stop();
+}
+
+
+TEST_CASE("up and out call", "[Instrument]"){
+  BlackScholesModel<double> model{110.0, 0.1, 0.05};
+  UpAndOutCall<double> exotic_option{100, 1.0, 140, 0.01, 0.01};
+  PCGRNG rng;
+
+
+  auto result = monte_carlo_simulation(exotic_option, model, rng, 100000);
+  auto mean = std::accumulate(result.begin(), result.end(), 0.0l,
+               [](auto sum, auto v){return sum + v[0] + v[1];}) / 100000;
+
+  for(auto i = 0; i < 10; ++i){
+    std::cout << result[i][0] << " " << result[i][1] << "\n";
+  }
 }

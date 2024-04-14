@@ -5,7 +5,7 @@
 #include <condition_variable>
 #include <thread>
 #include <future>
-#include <chrono>
+
 
 using namespace std::chrono_literals;
 
@@ -18,6 +18,11 @@ class ThreadSafeQueue{
     bool interrupt_{false};
 
 public:
+    ThreadSafeQueue() : interrupt_(false) {}
+
+    ~ThreadSafeQueue() {
+        interrupt();
+    }
 
     bool empty() const {
         std::lock_guard<std::mutex> lk(mutex_);
@@ -62,7 +67,7 @@ public:
 
     void clear() {
         std::queue<T> empty;
-        std::swap(empty, queue_);
+        std::swap(queue_, empty);
     }
 };
 
