@@ -92,9 +92,6 @@ public:
   size_t number_of_parameters() const {
     return const_cast<FinancialModel<T> *>(this)->parameters().size();
   }
-
-
-
 };
 
 // ABC interface for random number generators. Would like to benchmark many
@@ -109,8 +106,7 @@ public:
 
   // In order to be compatible with Sobol and some other deterministic PRNG's, we require our RNG interface to have a jump ahead 
   // this has the added benefit that a parallel simulation and non parallel simulation with the same seed will have the same result.
-  // In order to avoid directly implementing this for the Mersenne Twist RNG (which is possible but tedious), 
-  // the function has a default implementation that just runs the RNG and throws away the results.
+
   virtual void jump_ahead(const unsigned steps) = 0;
 
   virtual std::unique_ptr<RNG> clone() const = 0;
