@@ -3,7 +3,135 @@
 #include "Instruments.h"
 #include "MCLib.h"
 #include "RNGs.h"
+#include <list>
 
+
+
+static void lesscrazy(benchmark::State &state) {
+  std::vector<int> v(100, 0);
+
+  for (auto _ : state) {
+    for (int i = 0; i < 5; ++i) {
+      std::jthread thr([&v, i] {
+        for (int k = 0; k < 20; ++k) {
+          v[(i % 4) * 20 + k] = 1;
+        }
+      });
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void crazy(benchmark::State &state) {
+  std::vector<int> v(100, 0);
+
+  for (auto _ : state) {
+    for (int i = 0; i < 100; ++i) {
+      std::jthread thr([&v, i] { v[i] = 1; });
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void normal(benchmark::State &state) {
+  std::vector<int> v(100, 0);
+
+  for (auto _ : state) {
+    for (int i = 0; i < 100; ++i) {
+      v[i] = 1;
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void parvv(benchmark::State &state) {
+  std::vector<int> v(100, 2);
+
+  std::vector<std::vector<int>> w(100, std::vector<int>(256, 0));
+
+  for (auto _ : state) {
+    for (auto i = 0; i < 100; ++i) {
+      std::jthread th([&w, &v, i] { w[i] = v; });
+    }
+
+    benchmark::DoNotOptimize(w);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void betterparvv(benchmark::State &state) {
+  std::vector<int> v(100, 2);
+  std::vector<std::vector<int>> w(100, std::vector<int>(256, 0));
+
+  for (auto _ : state) {
+    for (auto i = 0; i < 5; ++i) {
+      std::jthread thr([&v, &w, i] {
+        for (int k = 0; k < 5; ++k)
+          w[(i % 5) * 20 + k] = v;
+      });
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void stvv(benchmark::State &state) {
+  std::vector<int> v(100, 2);
+  std::vector<std::vector<int>> w(100, std::vector<int>(256, 0));
+
+  for (auto _ : state) {
+    for (auto i = 0; i < 100; ++i) {
+      w[i] = v;
+    }
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void parlist(benchmark::State &state) {
+  std::list<std::vector<int>> ls;
+  for (auto i = 0; i < 100; ++i) {
+    ls.emplace_back(std::vector<int>(256, 2));
+  }
+
+  const std::vector<int> v(256, 10);
+
+  for (auto _ : state) {
+    for (auto &w : ls) {
+      std::jthread thr([&w, &v] { w = v; });
+    }
+    benchmark::DoNotOptimize(ls);
+    benchmark::ClobberMemory();
+  }
+}
+
+static void threadpool(benchmark::State &state) {
+  auto pool = ThreadPool::getInstance();
+  pool->start();
+
+  std::vector<std::vector<int>> v(100, std::vector<int>(256, 2));
+  std::vector<int> w(256, 10);
+  vector<future<bool>> futures;
+  futures.reserve(100);
+
+  for (auto _ : state) {
+    for (int i = 0; i < 100; ++i) {
+      futures.push_back(pool->spawnTask([&, i]() {
+        v[i] = w;
+        return true;
+      }));
+    }
+    for (auto &fut : futures)
+      pool->activeWait(fut);
+    benchmark::DoNotOptimize(v);
+    benchmark::ClobberMemory();
+  }
+
+  pool->stop();
+}
 
 
 static void BM_Mersenne(benchmark::State& state) {
@@ -75,13 +203,18 @@ static void BM_serial(benchmark::State& state){
 
 
 
-
-
+//BENCHMARK(crazy);
+//BENCHMARK(lesscrazy);
+//BENCHMARK(normal);
+//BENCHMARK(parvv);
+//BENCHMARK(betterparvv);
+//BENCHMARK(stvv);
+//BENCHMARK(parlist);
+//BENCHMARK(threadpool);
 
 
 //BENCHMARK(BM_Mersenne);
 //BENCHMARK(BM_PCG);
-
 
 BENCHMARK(BM_parallel);
 BENCHMARK(BM_serial);
