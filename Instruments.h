@@ -47,8 +47,8 @@ template <typename T> class UpAndOutCall : public Instrument<T> {
 
   static constexpr double one_hour = 0.000114469;
 
-  vector<double> timeline_;
-  vector<SampleDef<T>> samples_needed_;
+  std::vector<double> timeline_;
+  std::vector<SampleDef<T>> samples_needed_;
 
 public:
   UpAndOutCall(const double strike, const double expiry, const double barrier,
@@ -76,15 +76,15 @@ public:
   }
 
 
-  unique_ptr<Instrument<T>> clone() const override {
+  std::unique_ptr<Instrument<T>> clone() const override {
     return make_unique<UpAndOutCall<T>>(*this);
   }
 
-    const vector<double>& timeline() const override {
+    const std::vector<double>& timeline() const override {
         return timeline_;
     }
 
-    const vector<SampleDef<T>>& samples_needed() const override {
+    const std::vector<SampleDef<T>>& samples_needed() const override {
         return samples_needed_;
     } 
 
@@ -92,7 +92,7 @@ public:
         return 2;
     }
 
-    void payoffs(const Scenario<T>& path, vector<double>& payoffs) const override {
+    void payoffs(const Scenario<T>& path, std::vector<double>& payoffs) const override {
         const double smooth = double(path[0].forwards[0] * smoothing_factor_);
         const double two_smooth = 2 * smooth;
         const double bar_smooth = barrier_ + smooth;

@@ -4,15 +4,15 @@
 #include <future>
 #include <thread>
 
-using namespace std;
+using namespace std::chrono_literals;
 
-typedef packaged_task<bool(void)> Task;
-typedef future<bool> TaskHandle;
+using Task =  std::packaged_task<bool(void)>;
+using TaskHandle = std::future<bool>;
 
 class ThreadPool {
   static ThreadPool myInstance;
   ConcurrentQueue<Task> myQueue;
-  vector<thread> myThreads;
+  std::vector<std::thread> myThreads;
   bool myActive;
   bool myInterrupt;
   static thread_local size_t myTLSNum;
@@ -37,12 +37,12 @@ public:
 
   static size_t threadNum() { return myTLSNum; }
 
-  void start(const size_t nThread = thread::hardware_concurrency() - 1) {
+  void start(const size_t nThread = std::thread::hardware_concurrency() - 1) {
     if (!myActive) {
       myThreads.reserve(nThread);
 
       for (size_t i = 0; i < nThread; i++)
-        myThreads.push_back(thread(&ThreadPool::threadFunc, this, i + 1));
+        myThreads.push_back(std::thread(&ThreadPool::threadFunc, this, i + 1));
 
       myActive = true;
     }
@@ -56,7 +56,7 @@ public:
 
       myQueue.interrupt();
 
-      for_each(myThreads.begin(), myThreads.end(), mem_fn(&thread::join));
+      for_each(myThreads.begin(), myThreads.end(), mem_fn(&std::thread::join));
 
       myThreads.clear();
 
@@ -75,7 +75,7 @@ public:
   ThreadPool &operator=(ThreadPool &&rhs) = delete;
 
   template <typename Callable> TaskHandle spawnTask(Callable c) {
-    Task t(move(c));
+    Task t(std::move(c));
     TaskHandle f = t.get_future();
     myQueue.push(std::move(t));
     return f;
@@ -85,7 +85,7 @@ public:
     Task t;
     bool b = false;
 
-    while (f.wait_for(0s) != future_status::ready) {
+    while (f.wait_for(0s) != std::future_status::ready) {
       if (myQueue.tryPop(t)) {
         t();
         b = true;

@@ -2,13 +2,15 @@
 #include <condition_variable>
 #include <mutex>
 #include <queue>
-using namespace std;
+
+
+
 
 template <class T> class ConcurrentQueue {
 
-  queue<T> myQueue;
-  mutable mutex myMutex;
-  condition_variable myCV;
+  std::queue<T> myQueue;
+  mutable std::mutex myMutex;
+  std::condition_variable myCV;
   bool myInterrupt;
 
 public:
@@ -16,12 +18,12 @@ public:
   ~ConcurrentQueue() { interrupt(); }
 
   bool empty() const {
-    lock_guard<mutex> lk(myMutex);
+    std::lock_guard<std::mutex> lk(myMutex);
     return myQueue.empty();
   }
 
   bool tryPop(T &t) {
-    lock_guard<mutex> lk(myMutex);
+    std::lock_guard<std::mutex> lk(myMutex);
     if (myQueue.empty())
       return false;
     t = move(myQueue.front());
@@ -32,7 +34,7 @@ public:
 
   void push(T t) {
     {
-      lock_guard<mutex> lk(myMutex);
+      std::lock_guard<std::mutex> lk(myMutex);
       myQueue.push(move(t));
     }
 
@@ -40,7 +42,7 @@ public:
   }
 
   bool pop(T &t) {
-    unique_lock<mutex> lk(myMutex);
+    std::unique_lock<std::mutex> lk(myMutex);
 
     while (!myInterrupt && myQueue.empty())
       myCV.wait(lk);
@@ -56,7 +58,7 @@ public:
 
   void interrupt() {
     {
-      lock_guard<mutex> lk(myMutex);
+      std::lock_guard<std::mutex> lk(myMutex);
       myInterrupt = true;
     }
     myCV.notify_all();
@@ -65,7 +67,7 @@ public:
   void resetInterrupt() { myInterrupt = false; }
 
   void clear() {
-    queue<T> empty;
+    std::queue<T> empty;
     swap(myQueue, empty);
   }
 };
