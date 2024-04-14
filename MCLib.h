@@ -1,4 +1,5 @@
 #pragma once
+#include <list>
 #include <vector>
 #include <algorithm>
 #include <memory>
@@ -148,8 +149,7 @@ monte_carlo_simulation(Instrument<double> &instrument,
     model.generate_path(gaussian_vector, path);
     instrument.payoffs(path, results[i]);
   }
-
-
+  
   return results;
 }
 
@@ -242,3 +242,5 @@ parallel_monte_carlo_simulation(
   for(auto& future : future_vector) pool->activeWait(future);
   return results;
 }
+
+

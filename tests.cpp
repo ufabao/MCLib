@@ -125,6 +125,7 @@ TEST_CASE("Simulation works!", "[Simulation]"){
   REQUIRE(std::abs(mean - 7.965) <= 0.2);
 }
 
+
 TEST_CASE("Parallel Simulation Works!", "[Simulation]"){
   BlackScholesModel<double> model{100.0, 0.2};
   EuropeanCall<double> call{100.0, 1.0};
