@@ -85,7 +85,7 @@ public:
 
   virtual std::unique_ptr<FinancialModel<T>> clone() const = 0;
   
-  virtual ~FinancialModel(){}
+  virtual ~FinancialModel() = default;
 
   virtual const std::vector<T *> &parameters() = 0;
 
