@@ -37,9 +37,9 @@ public:
     payoffs[0] = std::max(path[0].forwards[0] - strike_, 0.0) *
                  path[0].discounts[0] / path[0].numeraire;
   }
-
-  ~EuropeanCall() override = default;
 };
+
+
 
 template <typename T> class UpAndOutCall : public Instrument<T> {
   double strike_;
