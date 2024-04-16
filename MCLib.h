@@ -52,7 +52,8 @@ public:
   virtual const size_t number_of_payoffs() const = 0;
 
   virtual void payoffs(const Scenario<T> &path,
-                       std::vector<T> &payoffs) const = 0;
+                       std::vector<T> &payoffs) 
+          const = 0;
 
   virtual std::unique_ptr<Instrument<T>> clone() const = 0;
   virtual ~Instrument() = default;
@@ -75,7 +76,8 @@ public:
   virtual size_t simulation_dimension() const = 0;
 
   virtual void generate_path(const std::vector<double> &gaussian_vector,
-                             Scenario<T> &path) const = 0;
+                             Scenario<T> &path) 
+          const = 0;
 
   virtual void attune(const Instrument<T> &instrument) = 0;
 
@@ -117,13 +119,14 @@ public:
 // Finally we have the monte carlo algorithm, which is fully generic on the
 // instrument/model/rng.
 inline std::vector<std::vector<double>>
-monte_carlo_simulation(Instrument<double> &instrument,
-                       FinancialModel<double> &model, const RNG &rng,
-                       size_t num_paths) {
+monte_carlo_simulation(const Instrument<double> &instrument,
+                       FinancialModel<double> &model, 
+                       const RNG &rng,
+                       const size_t num_paths) {
 
   const auto payoff_size = instrument.number_of_payoffs();
-  std::vector<std::vector<double>> results(num_paths,
-                                           std::vector<double>(payoff_size));
+  std::vector<std::vector<double>> 
+      results(num_paths,std::vector<double>(payoff_size));
 
   model.attune(instrument);
   auto c_rng = rng.clone();
@@ -145,7 +148,8 @@ monte_carlo_simulation(Instrument<double> &instrument,
 
 inline std::vector<std::vector<double>>
 parallel_monte_carlo_simulation(const Instrument<double> &instrument,
-                                FinancialModel<double> &model, const RNG &rng,
+                                FinancialModel<double> &model, 
+                                const RNG &rng,
                                 const size_t number_of_iterations)
 
 // The parallel version of our simulation. finally all of our hardwork will
@@ -234,5 +238,6 @@ parallel_monte_carlo_simulation(const Instrument<double> &instrument,
 
   for (auto &future : future_vector)
     pool->activeWait(future);
+  
   return results;
 }
